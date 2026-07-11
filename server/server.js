@@ -65,6 +65,39 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
+app.get('/api/public/stats', async (req, res) => {
+    try {
+        const User = require('./models/User');
+        const Transaction = require('./models/Transaction');
+        const VirtualCard = require('./models/VirtualCard');
+        
+        const userCount = await User.countDocuments() || 0;
+        const transactionCount = await Transaction.countDocuments() || 0;
+        const cardCount = await VirtualCard.countDocuments() || 0;
+        
+        const txAggregate = await Transaction.aggregate([
+            { $match: { status: 'SUCCESS' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        
+        const moneyProcessed = txAggregate.length > 0 ? txAggregate[0].total : 0;
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                users: userCount,
+                transactions: transactionCount,
+                moneyProcessed: moneyProcessed,
+                cards: cardCount,
+                securityScore: 99.9,
+                uptime: Math.floor(process.uptime())
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log('MongoDB connected');

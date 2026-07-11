@@ -21,7 +21,8 @@ router.get('/me', protect, async (req, res) => {
             email: user.email,
             accountBalance: user.accountBalance,
             role: user.role,
-            hasTransferPin: !!user.transferPinHash
+            hasTransferPin: !!user.transferPinHash,
+            twoFactorEnabled: user.twoFactorEnabled
         }
     });
 });
