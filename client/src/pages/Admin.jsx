@@ -1,45 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import api from '../api/axios';
-import { ShieldAlert, Users, CreditCard, Activity, Server, AlertTriangle, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useAppData } from '../context/AppDataContext';
+import { ShieldAlert, Users, CreditCard, Activity, Server, AlertTriangle, ShieldCheck, CheckCircle2, AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Admin = () => {
-  const [data, setData] = useState({
-    users: [],
-    transactions: [],
-    cards: [],
-    auditLogs: []
-  });
-  const [loading, setLoading] = useState(true);
+  const { adminData: data, adminLoading: loading, adminLastUpdated, refreshAdmin } = useAppData();
   const [activeTab, setActiveTab] = useState('overview'); // overview, users, cards, security
-
-  useEffect(() => {
-    const fetchAdminData = async () => {
-      try {
-        const [usersRes, txRes, cardsRes, auditRes] = await Promise.all([
-          api.get('/admin/users'),
-          api.get('/admin/transactions'),
-          api.get('/admin/cards'),
-          api.get('/admin/audit-logs')
-        ]);
-        
-        setData({
-          users: usersRes.data.users || [],
-          transactions: txRes.data.transactions || [],
-          cards: cardsRes.data.cards || [],
-          auditLogs: auditRes.data.logs || []
-        });
-      } catch (err) {
-        console.error('Failed to load admin data', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAdminData();
-  }, []);
 
   // Compute stats
   const totalUsers = data.users.length;
@@ -60,6 +29,29 @@ const Admin = () => {
     { name: 'Active Cards', value: activeCards, color: '#10b981' },
     { name: 'Frozen Cards', value: frozenCards, color: '#3b82f6' },
   ];
+
+  // ── Enriched Admin Metrics ──
+  const enrichedMetrics = useMemo(() => {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    const txs24h = data.transactions.filter(tx => new Date(tx.createdAt) > oneDayAgo);
+    const failedTxs = data.transactions.filter(tx => tx.status === 'FAILED');
+    const failedPercent = data.transactions.length > 0
+      ? ((failedTxs.length / data.transactions.length) * 100).toFixed(1)
+      : '0.0';
+
+    // Peak activity hour
+    const hourCounts = new Array(24).fill(0);
+    data.transactions.forEach(tx => {
+      const h = new Date(tx.createdAt).getHours();
+      hourCounts[h]++;
+    });
+    const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+    const peakLabel = peakHour >= 0 ? `${peakHour.toString().padStart(2, '0')}:00 - ${(peakHour + 1).toString().padStart(2, '0')}:00` : 'N/A';
+
+    return { txs24h: txs24h.length, failedPercent, peakLabel };
+  }, [data.transactions]);
 
   if (loading) {
     return (

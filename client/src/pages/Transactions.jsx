@@ -1,146 +1,119 @@
-import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
-import Navbar from '../components/Navbar';
-import TransactionTable from '../components/TransactionTable';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
-import { Search, Filter, Download, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
+import { useAppData } from '../context/AppDataContext';
+import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
+import TransactionTable from '../components/TransactionTable';
 import { motion } from 'framer-motion';
+import { Search, ArrowDownRight, ArrowUpRight, RefreshCw, Filter } from 'lucide-react';
+import Loader from '../components/Loader';
 
 const Transactions = () => {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, sent, received
+  const { transactions, transactionsLoading, refreshTransactions } = useAppData();
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all'); // all, sent, received, pending, failed
 
-  useEffect(() => {
-    const fetchTxs = async () => {
-      try {
-        const response = await api.get('/transactions/history');
-        const data = response.data;
-        setTransactions(Array.isArray(data) ? data : Array.isArray(data.transactions) ? data.transactions : []);
-      } catch (error) {
-        console.error('Failed to fetch transactions', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTxs();
-  }, []);
+  const filteredTransactions = useMemo(() => {
+    let txs = [...transactions];
 
-  const filteredTxs = transactions.filter(tx => {
-    const isSender = tx.sender?.email === user?.email;
-    if (filter === 'sent' && !isSender) return false;
-    if (filter === 'received' && isSender) return false;
-    
-    if (search) {
-      const q = search.toLowerCase();
-      const otherParty = isSender ? tx.receiver?.email?.toLowerCase() : tx.sender?.email?.toLowerCase();
-      if (otherParty && !otherParty.includes(q)) return false;
+    // Search
+    if (search.trim()) {
+      const term = search.toLowerCase();
+      txs = txs.filter(tx =>
+        tx.sender?.name?.toLowerCase().includes(term) ||
+        tx.sender?.email?.toLowerCase().includes(term) ||
+        tx.receiver?.name?.toLowerCase().includes(term) ||
+        tx.receiver?.email?.toLowerCase().includes(term) ||
+        tx.reference?.toLowerCase().includes(term) ||
+        String(tx.amount).includes(term)
+      );
     }
-    
-    return true;
-  });
 
-  const totalSent = transactions.filter(t => t.sender?.email === user?.email).reduce((sum, t) => sum + t.amount, 0);
-  const totalReceived = transactions.filter(t => t.receiver?.email === user?.email).reduce((sum, t) => sum + t.amount, 0);
+    // Filter
+    if (filter === 'sent') {
+      txs = txs.filter(tx => tx.sender?.email === user?.email);
+    } else if (filter === 'received') {
+      txs = txs.filter(tx => tx.receiver?.email === user?.email);
+    } else if (filter === 'pending') {
+      txs = txs.filter(tx => tx.status === 'PROCESSING' || tx.status === 'pending');
+    } else if (filter === 'failed') {
+      txs = txs.filter(tx => tx.status === 'FAILED');
+    }
+
+    return txs;
+  }, [transactions, search, filter, user?.email]);
+
+  const filterButtons = [
+    { key: 'all', label: 'All', icon: null },
+    { key: 'sent', label: 'Sent', icon: <ArrowUpRight size={14} /> },
+    { key: 'received', label: 'Received', icon: <ArrowDownRight size={14} /> },
+    { key: 'pending', label: 'Pending', icon: null },
+    { key: 'failed', label: 'Failed', icon: null },
+  ];
 
   return (
     <div className="app-container">
       <Sidebar />
       <main className="main-content">
         <Navbar />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-            <h1 style={{ fontSize: '1.5rem', margin: 0, color: 'var(--text-heading)' }}>Transactions</h1>
-            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Download size={16} /> Export CSV
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '80px' }}>
+
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}
+          >
+            <div>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-heading)', margin: '0 0 4px 0' }}>Transactions</h1>
+              <p style={{ fontSize: '0.9375rem', color: 'var(--text-secondary)', margin: 0 }}>
+                {transactions.length} total transactions
+              </p>
+            </div>
+            <button
+              className="btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px' }}
+              onClick={() => refreshTransactions()}
+              disabled={transactionsLoading}
+            >
+              <RefreshCw size={14} className={transactionsLoading ? 'spin' : ''} /> Refresh
             </button>
-          </div>
+          </motion.div>
 
-          {/* Stats Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
-            <div className="glass-panel" style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <RefreshCw size={18} />
-                </div>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Transactions</p>
-              </div>
-              <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700 }}>{transactions.length}</h2>
+          {/* Search & Filters */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: '1 1 300px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Search by name, email, amount, or reference..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ paddingLeft: '40px' }}
+              />
             </div>
-
-            <div className="glass-panel" style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--danger-bg)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ArrowUpRight size={18} />
-                </div>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Sent</p>
-              </div>
-              <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700 }}>${totalSent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--success-bg)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ArrowDownRight size={18} />
-                </div>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Received</p>
-              </div>
-              <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700 }}>${totalReceived.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {filterButtons.map(f => (
+                <button
+                  key={f.key}
+                  className={filter === f.key ? 'btn-primary' : 'btn-secondary'}
+                  onClick={() => setFilter(f.key)}
+                  style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}
+                >
+                  {f.icon} {f.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-            
-            {/* Filters */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '16px' }}>
-              
-              <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px' }}>
-                <button 
-                  onClick={() => setFilter('all')}
-                  style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500, fontSize: '0.875rem', background: filter === 'all' ? 'var(--bg-card)' : 'transparent', color: filter === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: filter === 'all' ? 'var(--shadow-sm)' : 'none', transition: 'all 0.2s' }}
-                >
-                  All
-                </button>
-                <button 
-                  onClick={() => setFilter('sent')}
-                  style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500, fontSize: '0.875rem', background: filter === 'sent' ? 'var(--bg-card)' : 'transparent', color: filter === 'sent' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: filter === 'sent' ? 'var(--shadow-sm)' : 'none', transition: 'all 0.2s' }}
-                >
-                  Sent
-                </button>
-                <button 
-                  onClick={() => setFilter('received')}
-                  style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500, fontSize: '0.875rem', background: filter === 'received' ? 'var(--bg-card)' : 'transparent', color: filter === 'received' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: filter === 'received' ? 'var(--shadow-sm)' : 'none', transition: 'all 0.2s' }}
-                >
-                  Received
-                </button>
-              </div>
-
-              <div style={{ position: 'relative', width: '260px' }}>
-                <Search size={16} color="var(--text-tertiary)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input 
-                  type="text" 
-                  placeholder="Search email..." 
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="input-field" 
-                  style={{ paddingLeft: '36px', height: '40px' }}
-                />
-              </div>
-
-            </div>
-
-            {loading ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)' }}>Loading transactions...</div>
-            ) : (
-              <TransactionTable transactions={filteredTxs} userEmail={user?.email} />
-            )}
-
-          </div>
-
+          {/* Table */}
+          {transactionsLoading && transactions.length === 0 ? (
+            <Loader />
+          ) : (
+            <TransactionTable transactions={filteredTransactions} userEmail={user?.email} />
+          )}
         </div>
       </main>
     </div>

@@ -15,36 +15,39 @@ const Login = () => {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [userIdFor2FA, setUserIdFor2FA] = useState(null);
   const navigate = useNavigate();
-  const { user, loading, login } = useAuth();
+  const { user, loading, login, refreshUser } = useAuth();
 
   if (loading) return <Loader />;
   if (user) return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       if (needs2FA) {
         const res = await api.post('/auth/2fa/verify', { userId: userIdFor2FA, code: twoFactorCode });
-        toast.success(res.data.message);
-        window.location.href = '/dashboard';
+        toast.success(res.data.message, { id: 'login-success' });
+        // Refresh user state via context instead of full page reload
+        await refreshUser();
+        navigate(user?.role === 'admin' ? '/admin' : '/dashboard', { replace: true });
         return;
       }
 
-      const res = await api.post('/auth/login', { email, password });
-      
-      if (res.data.requires2FA) {
+      // Single login call via AuthContext (handles /auth/login + fetchUser internally)
+      const result = await login(email, password);
+
+      if (result?.requires2FA) {
         setNeeds2FA(true);
-        setUserIdFor2FA(res.data.userId);
-        toast('Please enter your 2FA code', { icon: '🔐' });
+        setUserIdFor2FA(result.userId);
+        toast('Please enter your 2FA code', { icon: '🔐', id: '2fa-prompt' });
         setSubmitting(false);
         return;
       }
 
-      await login(email, password);
-      toast.success('Welcome back!');
+      toast.success('Welcome back!', { id: 'welcome-toast', duration: 3000 });
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Invalid credentials');
+      toast.error(error.response?.data?.message || 'Invalid credentials', { id: 'login-error' });
       setSubmitting(false);
     }
   };

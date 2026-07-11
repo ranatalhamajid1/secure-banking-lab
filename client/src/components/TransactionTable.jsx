@@ -3,14 +3,14 @@ import { ArrowDownRight, ArrowUpRight, Inbox, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
-const TransactionTable = ({ transactions, userEmail }) => {
-  const displayTxs = transactions.slice(0, 10);
+const TransactionTable = ({ transactions, userEmail, limit }) => {
+  const displayTxs = limit ? transactions.slice(0, limit) : transactions;
 
   return (
     <div className="glass-panel" style={{ padding: '24px', flex: '1 1 100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading)', margin: 0 }}>Recent Activity</h3>
-        {transactions.length > 10 && (
+        {limit && transactions.length > limit && (
           <Link to="/transactions" style={{ fontSize: '0.875rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
             View All
           </Link>
@@ -38,7 +38,7 @@ const TransactionTable = ({ transactions, userEmail }) => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {displayTxs.map((tx, i) => {
-            const isSender = userEmail ? tx.sender?.email === userEmail : false; // Handle admin view when userEmail is null
+            const isSender = userEmail ? tx.sender?.email === userEmail : false;
             const isIncome = !isSender;
             
             return (

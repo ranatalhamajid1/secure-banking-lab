@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { Toaster } from 'react-hot-toast'
+import InactivityTimer from './components/InactivityTimer'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -36,6 +37,7 @@ createRoot(document.getElementById('root')).render(
             },
           }}
         />
+        <InactivityTimer />
         <App />
       </AuthProvider>
     </ThemeProvider>

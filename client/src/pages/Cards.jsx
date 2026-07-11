@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { useAppData } from '../context/AppDataContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, Plus, Snowflake, Lock, Globe, MonitorSmartphone, Store, Landmark, RefreshCw } from 'lucide-react';
+import bankingEvents from '../utils/eventDispatcher';
 
 const Card3DFlip = ({ card, isFlipped, onClick }) => {
   return (
@@ -90,8 +92,7 @@ const Card3DFlip = ({ card, isFlipped, onClick }) => {
 
 const Cards = () => {
   const { user } = useAuth();
-  const [cards, setCards] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { cards, setCards, cardsLoading: loading, refreshCards } = useAppData();
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -102,21 +103,6 @@ const Cards = () => {
   const [revealPin, setRevealPin] = useState('');
   const [revealing, setRevealing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-
-  const fetchCards = async () => {
-    try {
-      const res = await api.get('/cards');
-      setCards(res.data);
-    } catch (err) {
-      toast.error('Failed to load cards');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCards();
-  }, []);
 
   useEffect(() => {
     let timer;
@@ -139,10 +125,12 @@ const Cards = () => {
       const res = await api.post('/cards/create');
       toast.success(res.data.message);
       // We push the new card with full details (including CVV) so user can see it once
-      setCards([...cards, res.data.card]);
+      setCards(prev => [...prev, res.data.card]);
       setActiveCardIndex(cards.length);
       // Auto flip to back to show CVV
       setTimeout(() => setIsFlipped(true), 500);
+      // Notify AppDataProvider
+      bankingEvents.emit('card:created', res.data.card);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create card');
     } finally {
@@ -213,7 +201,7 @@ const Cards = () => {
       toast.error(msg);
       if (err.response?.data?.cardDeleted) {
         // Card was corrupted and deleted by the server — refresh list
-        fetchCards();
+        refreshCards();
         setActiveCardIndex(0);
         setShowRevealModal(false);
         setRevealPin('');
