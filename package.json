@@ -4,6 +4,8 @@
   "description": "SecureBank – Enterprise-grade banking application with comprehensive testing",
   "private": true,
   "scripts": {
+    "build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
+    "start": "npm start --prefix server",
     "dev:client": "cd client && npm run dev",
     "dev:server": "cd server && npm run dev",
     "test:e2e": "npx playwright test",
