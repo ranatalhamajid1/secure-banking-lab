@@ -98,6 +98,33 @@ const Cards = () => {
   const [generating, setGenerating] = useState(false);
   const [togglingFreeze, setTogglingFreeze] = useState(false);
 
+  const physicalCards = [
+    {
+      _id: 'mock_debit_1',
+      type: 'debit',
+      cardType: 'Physical Debit',
+      maskedNumber: '**** **** **** 1234',
+      cardHolderName: user?.name || 'Card Holder',
+      expiryDate: '12/28',
+      status: 'active',
+      spendingLimit: { daily: 1000, monthly: 10000 },
+      permissions: { online: true, international: false, atm: true }
+    },
+    {
+      _id: 'mock_credit_1',
+      type: 'credit',
+      cardType: 'Physical Credit',
+      maskedNumber: '**** **** **** 5678',
+      cardHolderName: user?.name || 'Card Holder',
+      expiryDate: '09/27',
+      status: 'active',
+      spendingLimit: { daily: 5000, monthly: 15000 },
+      permissions: { online: true, international: true, atm: false }
+    }
+  ];
+
+  const allCards = [...physicalCards, ...cards.map(c => ({ ...c, type: 'virtual', cardType: 'Virtual Card' }))];
+
   // Reveal CVV states
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [revealPin, setRevealPin] = useState('');
@@ -106,18 +133,21 @@ const Cards = () => {
 
   useEffect(() => {
     let timer;
+    const activeCard = allCards[activeCardIndex];
     if (timeLeft > 0) {
       timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-    } else if (timeLeft === 0 && cards[activeCardIndex]?.cvv) {
-      // Hide details after timer
-      const updatedCards = [...cards];
-      updatedCards[activeCardIndex].cvv = null;
-      updatedCards[activeCardIndex].fullCardNumber = null;
-      setCards(updatedCards);
-      setIsFlipped(false);
+    } else if (timeLeft === 0 && activeCard?.cvv) {
+      const virtualIndex = activeCardIndex - physicalCards.length;
+      if (virtualIndex >= 0) {
+        const updatedCards = [...cards];
+        updatedCards[virtualIndex].cvv = null;
+        updatedCards[virtualIndex].fullCardNumber = null;
+        setCards(updatedCards);
+        setIsFlipped(false);
+      }
     }
     return () => clearTimeout(timer);
-  }, [timeLeft, cards, activeCardIndex]);
+  }, [timeLeft, cards, activeCardIndex, allCards, physicalCards.length]);
 
   const handleGenerateCard = async () => {
     setGenerating(true);
@@ -126,7 +156,7 @@ const Cards = () => {
       toast.success(res.data.message);
       // We push the new card with full details (including CVV) so user can see it once
       setCards(prev => [...prev, res.data.card]);
-      setActiveCardIndex(cards.length);
+      setActiveCardIndex(physicalCards.length + cards.length);
       // Auto flip to back to show CVV
       setTimeout(() => setIsFlipped(true), 500);
       // Notify AppDataProvider
@@ -139,15 +169,19 @@ const Cards = () => {
   };
 
   const handleToggleFreeze = async () => {
-    const card = cards[activeCardIndex];
+    const card = allCards[activeCardIndex];
     if (!card) return;
+    if (card.type !== 'virtual') return toast.error('Physical card controls are managed at branches.');
     setTogglingFreeze(true);
     try {
       const res = await api.patch(`/cards/${card._id}/freeze`);
       toast.success(res.data.message);
-      const updatedCards = [...cards];
-      updatedCards[activeCardIndex].status = res.data.card.status;
-      setCards(updatedCards);
+      const virtualIndex = activeCardIndex - physicalCards.length;
+      if (virtualIndex >= 0) {
+        const updatedCards = [...cards];
+        updatedCards[virtualIndex].status = res.data.card.status;
+        setCards(updatedCards);
+      }
       setIsFlipped(false);
     } catch (err) {
       toast.error('Failed to update card status');
@@ -157,12 +191,16 @@ const Cards = () => {
   };
 
   const handleTogglePermission = async (key, value) => {
-    const card = cards[activeCardIndex];
+    const card = allCards[activeCardIndex];
     if (!card || card.status === 'frozen') return;
+    if (card.type !== 'virtual') return toast.error('Physical card permissions are read-only online.');
     
+    const virtualIndex = activeCardIndex - physicalCards.length;
+    if (virtualIndex < 0) return;
+
     // Optimistic update
     const updatedCards = [...cards];
-    updatedCards[activeCardIndex].permissions[key] = value;
+    updatedCards[virtualIndex].permissions[key] = value;
     setCards(updatedCards);
 
     try {
@@ -172,7 +210,7 @@ const Cards = () => {
     } catch (err) {
       toast.error('Failed to update permission');
       // Revert on error
-      updatedCards[activeCardIndex].permissions[key] = !value;
+      updatedCards[virtualIndex].permissions[key] = !value;
       setCards([...updatedCards]);
     }
   };
@@ -183,13 +221,20 @@ const Cards = () => {
     setRevealing(true);
     
     try {
-      const card = cards[activeCardIndex];
+      const card = allCards[activeCardIndex];
+      if (card.type !== 'virtual') {
+        setRevealing(false);
+        return toast.error('Physical card details cannot be revealed online.');
+      }
       const res = await api.post(`/cards/${card._id}/reveal-cvv`, { pin: revealPin });
       
-      const updatedCards = [...cards];
-      updatedCards[activeCardIndex].cvv = res.data.cvv;
-      updatedCards[activeCardIndex].fullCardNumber = res.data.cardNumber;
-      setCards(updatedCards);
+      const virtualIndex = activeCardIndex - physicalCards.length;
+      if (virtualIndex >= 0) {
+        const updatedCards = [...cards];
+        updatedCards[virtualIndex].cvv = res.data.cvv;
+        updatedCards[virtualIndex].fullCardNumber = res.data.cardNumber;
+        setCards(updatedCards);
+      }
       
       setShowRevealModal(false);
       setRevealPin('');
@@ -225,7 +270,7 @@ const Cards = () => {
     );
   }
 
-  const activeCard = cards[activeCardIndex];
+  const activeCard = allCards[activeCardIndex] || allCards[0];
 
   return (
     <div className="app-container">
@@ -237,28 +282,43 @@ const Cards = () => {
           
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
             <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--text-heading)' }}>My Cards</h1>
-            {cards.length === 0 && (
-              <button onClick={handleGenerateCard} disabled={generating} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Plus size={18} /> {generating ? 'Generating...' : 'Get Virtual Card'}
-              </button>
-            )}
           </div>
 
-          {cards.length === 0 ? (
-            <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                <CreditCard size={40} color="var(--text-secondary)" />
+          <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px', scrollbarWidth: 'thin' }}>
+            {allCards.map((c, idx) => (
+              <div 
+                key={c._id} 
+                onClick={() => { setActiveCardIndex(idx); setIsFlipped(false); }}
+                style={{ 
+                  minWidth: '240px', padding: '16px', borderRadius: '12px', cursor: 'pointer',
+                  background: activeCardIndex === idx ? 'var(--accent-ultra-light)' : 'var(--bg-card)',
+                  border: `1px solid ${activeCardIndex === idx ? 'var(--accent)' : 'var(--border-color)'}`,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: activeCardIndex === idx ? 'var(--accent)' : 'var(--text-primary)' }}>{c.cardType}</span>
+                  <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', background: c.status === 'active' ? 'rgba(0,200,150,0.15)' : 'rgba(255,90,90,0.15)', color: c.status === 'active' ? '#00C896' : '#FF5A5A' }}>
+                    {c.status.toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ fontFamily: 'monospace', letterSpacing: '1px', color: 'var(--text-secondary)' }}>{c.maskedNumber}</div>
               </div>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>No cards yet</h2>
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '400px' }}>
-                Generate a free virtual card instantly to shop securely online and manage your subscriptions.
-              </p>
-              <button onClick={handleGenerateCard} disabled={generating} className="btn-primary" style={{ padding: '12px 32px' }}>
-                {generating ? 'Creating...' : 'Generate Free Card'}
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+            ))}
+            <div 
+                onClick={handleGenerateCard}
+                style={{ 
+                  minWidth: '240px', padding: '16px', borderRadius: '12px', cursor: generating ? 'not-allowed' : 'pointer',
+                  background: 'var(--bg-secondary)', border: '1px dashed var(--border-color)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)'
+                }}
+              >
+                <Plus size={24} />
+                <span style={{ fontWeight: 600 }}>{generating ? 'Generating...' : 'New Virtual Card'}</span>
+              </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
               
               {/* Left Column: Card Visual & Actions */}
               <div style={{ flex: '1 1 400px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -384,7 +444,6 @@ const Cards = () => {
 
               </div>
             </div>
-          )}
 
         </div>
       </main>

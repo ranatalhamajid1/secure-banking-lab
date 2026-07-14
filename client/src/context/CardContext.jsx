@@ -18,7 +18,8 @@ export const CardProvider = ({ children }) => {
     setCardsLoading(true);
     try {
       const res = await api.get('/cards');
-      setCards(res.data?.data?.cards || res.data || []);
+      const cardsData = res.data?.data || [];
+      setCards(Array.isArray(cardsData) ? cardsData : []);
     } catch (error) {
       console.error('Failed to refresh cards', error);
       toast.error('Could not refresh cards', { id: 'cards-refresh-fail', duration: 3000 });
