@@ -10,6 +10,11 @@ const api = axios.create({
 let isRefreshing = false;
 let failedQueue = [];
 let sessionToastShown = false;
+const pendingRequests = new Map();
+
+const getRequestKey = (config) => {
+  return `${config.method}:${config.url}?${new URLSearchParams(config.params).toString()}`;
+};
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach(prom => {
@@ -25,9 +30,36 @@ const processQueue = (error, token = null) => {
 // Suppress session expired toast for guest-status checks
 const SILENT_URLS = ['/auth/me', '/auth/refresh'];
 
+api.interceptors.request.use((config) => {
+  if (config.method === 'get') {
+    const key = getRequestKey(config);
+    if (pendingRequests.has(key)) {
+      const source = axios.CancelToken.source();
+      config.cancelToken = source.token;
+      source.cancel('Duplicate request canceled');
+    } else {
+      pendingRequests.set(key, true);
+    }
+  }
+  return config;
+}, (error) => Promise.reject(error));
+
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.config.method === 'get') {
+      pendingRequests.delete(getRequestKey(response.config));
+    }
+    return response;
+  },
   async (error) => {
+    if (error.config && error.config.method === 'get') {
+      pendingRequests.delete(getRequestKey(error.config));
+    }
+
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     if (!error.response) {
       return Promise.reject(error);
     }

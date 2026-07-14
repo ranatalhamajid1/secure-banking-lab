@@ -1,0 +1,64 @@
+# SecureBank – Artillery Load Test Configuration
+# Simulates high-concurrency scenarios to validate backend locks and performance
+
+config:
+  target: "http://localhost:5000"
+  phases:
+    # ── Warm-up Phase ──
+    - duration: 10
+      arrivalRate: 5
+      name: "Warm-up"
+    # ── Ramp-up Phase ──
+    - duration: 30
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp-up"
+    # ── Sustained Load ──
+    - duration: 30
+      arrivalRate: 50
+      name: "Sustained Load"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  # ── Scenario 1: Concurrent Login Attempts ──
+  - name: "Concurrent Logins"
+    weight: 40
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "loadtest-{{ $randomNumber(1, 100) }}@test.com"
+            password: "TestPassword123!"
+          capture:
+            - json: "$.message"
+              as: "loginMessage"
+
+  # ── Scenario 2: Dashboard Data Fetch ──
+  - name: "Dashboard Requests"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/public/stats"
+          expect:
+            - statusCode: 200
+
+  # ── Scenario 3: Health Check ──
+  - name: "Health Check"
+    weight: 20
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+            - hasProperty: "status"
+
+  # ── Scenario 4: Invalid Auth Attempts ──
+  - name: "Unauthorized Access Attempts"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/auth/me"
+          expect:
+            - statusCode: 401

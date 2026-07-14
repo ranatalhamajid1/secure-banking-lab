@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.local
+playwright-report/
+test-results/
+.DS_Store
+dist/
+coverage/
+server/uploads/
+server/test2fa.js

@@ -1,0 +1,184 @@
+# ═══════════════════════════════════════════════════════
+#  SecureBank – CI/CD Pipeline
+#  Triggers on every push and pull request
+# ═══════════════════════════════════════════════════════
+
+name: SecureBank CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Step 1: Lint & Build ──
+  build:
+    name: 🔨 Lint & Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install client dependencies
+        run: cd client && npm ci
+
+      - name: Install server dependencies
+        run: cd server && npm ci
+
+      - name: Lint client
+        run: cd client && npm run lint
+        continue-on-error: true
+
+      - name: Build client
+        run: cd client && npm run build
+
+  # ── Step 2: E2E Tests (Playwright) ──
+  e2e-tests:
+    name: 🎭 Playwright E2E
+    runs-on: ubuntu-latest
+    needs: build
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "echo 'db.runCommand(\"ping\").ok' | mongosh --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd client && npm ci
+          cd ../server && npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start backend
+        run: |
+          cd server && node server.js &
+        env:
+          PORT: 5000
+          MONGO_URI: mongodb://localhost:27017/banking-lab-test
+          JWT_SECRET: ci_test_jwt_secret
+          NODE_ENV: test
+          ENCRYPTION_KEY: 103885e71369a52f5c175d11565e0e666176f776f0514b0681efd6087dad4fa6
+
+      - name: Start frontend
+        run: |
+          cd client && npm run dev &
+          sleep 5
+
+      - name: Run Playwright tests
+        run: npx playwright test --project=Desktop-Chrome
+        continue-on-error: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: test-results/playwright-report/
+          retention-days: 30
+
+  # ── Step 3: Load Test (Artillery Smoke) ──
+  load-test:
+    name: 🚀 Artillery Smoke Test
+    runs-on: ubuntu-latest
+    needs: build
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install server dependencies
+        run: cd server && npm ci
+
+      - name: Install Artillery
+        run: npm install -g artillery
+
+      - name: Start backend
+        run: |
+          cd server && node server.js &
+          sleep 3
+        env:
+          PORT: 5000
+          MONGO_URI: mongodb://localhost:27017/banking-lab-test
+          JWT_SECRET: ci_test_jwt_secret
+          NODE_ENV: test
+          ENCRYPTION_KEY: 103885e71369a52f5c175d11565e0e666176f776f0514b0681efd6087dad4fa6
+
+      - name: Run Artillery smoke test
+        run: npx artillery run tests/artillery/smoke-test.yml
+        continue-on-error: true
+
+  # ── Step 4: Lighthouse CI ──
+  lighthouse:
+    name: 🔦 Lighthouse Audit
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd client && npm ci
+          npm install -g @lhci/cli
+
+      - name: Build client
+        run: cd client && npm run build
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        continue-on-error: true
+
+      - name: Upload Lighthouse report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-report
+          path: test-results/lighthouse/
+          retention-days: 30

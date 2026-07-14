@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useAppData } from '../context/AppDataContext';
+import { useTransaction } from '../context/TransactionContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import TransactionTable from '../components/TransactionTable';
@@ -10,7 +10,7 @@ import Loader from '../components/Loader';
 
 const Transactions = () => {
   const { user } = useAuth();
-  const { transactions, transactionsLoading, refreshTransactions } = useAppData();
+  const { transactions, transactionsLoading, refreshTransactions } = useTransaction();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // all, sent, received, pending, failed
 

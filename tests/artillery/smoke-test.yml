@@ -1,0 +1,37 @@
+# SecureBank – Artillery Smoke Test (CI/CD)
+# Quick 15-second smoke test to run in CI pipelines
+
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 15
+      arrivalRate: 5
+      name: "CI Smoke Test"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Health Check"
+    weight: 40
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+
+  - name: "Public Stats"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/public/stats"
+          expect:
+            - statusCode: 200
+
+  - name: "Auth Guard"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/auth/me"
+          expect:
+            - statusCode: 401

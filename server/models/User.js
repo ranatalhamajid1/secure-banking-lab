@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
+    twoFactorSecretPending: {
+        type: String,
+        default: null,
+    },
     transferPinHash: {
         type: String,
         default: null,

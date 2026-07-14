@@ -1,0 +1,380 @@
+{
+  "info": {
+    "name": "SecureBank API",
+    "description": "Complete API collection for the SecureBank enterprise banking application.\n\nSetup:\n1. Import this collection into Postman or Bruno\n2. Set the {{baseUrl}} variable to your server (default: http://localhost:5000)\n3. Run 'Register' or 'Login' first – cookies are automatically managed\n4. All protected routes will work after login (cookies persist per session)",
+    "version": "1.4.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "description": "User registration, login, 2FA, and session management",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@securebank.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "description": "Register a new user. Returns JWT cookies (httpOnly) and user profile."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@securebank.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "description": "Authenticate user. If 2FA is enabled, returns { requires2FA: true, tempToken }. Otherwise sets JWT cookies."
+          }
+        },
+        {
+          "name": "Verify 2FA",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/2fa/verify",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tempToken\": \"<paste tempToken from login response>\",\n  \"code\": \"123456\"\n}"
+            },
+            "description": "Complete 2FA login. Requires the tempToken from the login response and a valid TOTP code."
+          }
+        },
+        {
+          "name": "Setup 2FA",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/2fa/setup",
+            "description": "Enable 2FA for the authenticated user. Returns a QR code and secret key. 🔒 Requires auth cookie."
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "description": "Get the authenticated user's profile (name, email, balance, role, hasTransferPin, twoFactorEnabled). 🔒 Requires auth cookie."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "Refresh the access token using the refresh token cookie. Returns a new access token cookie."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": "Clear authentication cookies and invalidate the refresh token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "💸 Transactions",
+      "description": "Money transfers and transaction history",
+      "item": [
+        {
+          "name": "Transfer Money",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions/transfer",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverEmail\": \"jane@securebank.com\",\n  \"amount\": 250,\n  \"pin\": \"1234\",\n  \"requestId\": \"{{$guid}}\"\n}"
+            },
+            "description": "Transfer money to another user. Requires a Transfer PIN and a unique requestId for idempotency.\n\n🔒 Requires auth cookie.\n\nThe {{$guid}} variable auto-generates a unique UUID for each request."
+          }
+        },
+        {
+          "name": "Transaction History",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions/history",
+            "description": "Get all transactions where the authenticated user is sender or receiver. Sorted by newest first. 🔒 Requires auth cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Security",
+      "description": "Transfer PIN and device management",
+      "item": [
+        {
+          "name": "Set Transfer PIN",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/security/set-pin",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pin\": \"1234\"\n}"
+            },
+            "description": "Set or update the transfer PIN. Required before making transfers. Rate limited (20 req/15min). 🔒 Requires auth cookie."
+          }
+        },
+        {
+          "name": "Get Devices",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/security/devices",
+            "description": "List all devices/sessions the user has logged in from. 🔒 Requires auth cookie."
+          }
+        },
+        {
+          "name": "Remove Device",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/security/devices/:id",
+            "description": "Remove a specific device session. Replace :id with the device ObjectId. 🔒 Requires auth cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Virtual Cards",
+      "description": "Card creation and management",
+      "item": [
+        {
+          "name": "Create Card",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/cards/create",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cardType\": \"visa\"\n}"
+            },
+            "description": "Generate a new virtual card (visa or mastercard). Card number and CVV are stored encrypted. 🔒 Requires auth cookie."
+          }
+        },
+        {
+          "name": "Get My Cards",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/cards",
+            "description": "List all virtual cards belonging to the authenticated user. 🔒 Requires auth cookie."
+          }
+        },
+        {
+          "name": "Freeze / Unfreeze Card",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/cards/:id/freeze",
+            "description": "Toggle the freeze status of a virtual card. Replace :id with card ObjectId. 🔒 Requires auth cookie."
+          }
+        },
+        {
+          "name": "Update Card Permissions",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/cards/:id/permissions",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": {\n    \"onlinePayments\": true,\n    \"atmWithdrawals\": false,\n    \"internationalTransactions\": true\n  },\n  \"spendingLimit\": {\n    \"daily\": 5000,\n    \"monthly\": 50000\n  }\n}"
+            },
+            "description": "Update permissions and spending limits for a virtual card. 🔒 Requires auth cookie."
+          }
+        },
+        {
+          "name": "Reveal CVV",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/cards/:id/reveal-cvv",
+            "description": "Decrypt and reveal the CVV for a virtual card. Rate limited (20 req/15min). 🔒 Requires auth cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👑 Admin",
+      "description": "Admin-only endpoints (requires admin role)",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users",
+            "description": "List all registered users. 🔒👑 Requires admin auth cookie."
+          }
+        },
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/transactions",
+            "description": "List all transactions across the platform. 🔒👑 Requires admin auth cookie."
+          }
+        },
+        {
+          "name": "Get All Cards",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/cards",
+            "description": "List all virtual cards across the platform. 🔒👑 Requires admin auth cookie."
+          }
+        },
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/audit-logs",
+            "description": "View all audit trail entries (logins, transfers, security events). 🔒👑 Requires admin auth cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📤 Upload",
+      "description": "File upload endpoints",
+      "item": [
+        {
+          "name": "Upload Profile Image",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/upload/profile",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "description": "Profile image file (jpg, png, gif)"
+                }
+              ]
+            },
+            "description": "Upload a profile picture. Accepts image files via multipart form-data. 🔒 Requires auth cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🌐 Public",
+      "description": "Unauthenticated endpoints",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "description": "System health check. Returns status, uptime, memory usage, environment, and version."
+          }
+        },
+        {
+          "name": "Platform Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/public/stats",
+            "description": "Public platform statistics: user count, transaction count, money processed, card count, uptime."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔴 Security Tests",
+      "description": "Negative test cases to verify security hardening. All of these SHOULD fail.",
+      "item": [
+        {
+          "name": "❌ 2FA Bypass (raw userId)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/2fa/verify",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"507f1f77bcf86cd799439011\",\n  \"code\": \"123456\"\n}"
+            },
+            "description": "EXPECTED: 401 Unauthorized. Should reject because tempToken is missing."
+          }
+        },
+        {
+          "name": "❌ NoSQL Injection (login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": { \"$ne\": null },\n  \"password\": { \"$gt\": \"\" }\n}"
+            },
+            "description": "EXPECTED: 400 or 401. Mongo-sanitize should strip the $ operators."
+          }
+        },
+        {
+          "name": "❌ Unauthenticated Transfer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions/transfer",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverEmail\": \"victim@test.com\",\n  \"amount\": 9999,\n  \"pin\": \"0000\",\n  \"requestId\": \"attack-1\"\n}"
+            },
+            "description": "EXPECTED: 401 Unauthorized. No auth cookie = no transfer."
+          }
+        },
+        {
+          "name": "❌ Invalid JWT",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "header": [
+              { "key": "Cookie", "value": "token=invalid.jwt.token.here" }
+            ],
+            "description": "EXPECTED: 401 Unauthorized. Invalid JWT should be rejected."
+          }
+        },
+        {
+          "name": "❌ Admin Access (no auth)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users",
+            "description": "EXPECTED: 401 Unauthorized. Admin routes require authentication + admin role."
+          }
+        }
+      ]
+    }
+  ]
+}

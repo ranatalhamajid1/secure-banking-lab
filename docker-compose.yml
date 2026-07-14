@@ -1,0 +1,90 @@
+# ═══════════════════════════════════════════════════════
+#  SecureBank – Docker Compose
+#  One command to run the entire stack:
+#    docker compose up -d
+# ═══════════════════════════════════════════════════════
+
+services:
+  # ── MongoDB ──
+  mongodb:
+    image: mongo:7
+    container_name: securebank-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-securebank}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-securebank_dev_pass}
+      MONGO_INITDB_DATABASE: banking-lab
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - securebank-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Mongo Express (Database Admin UI) ──
+  mongo-express:
+    image: mongo-express:latest
+    container_name: securebank-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-securebank}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-securebank_dev_pass}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER:-securebank}:${MONGO_PASSWORD:-securebank_dev_pass}@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - securebank-network
+
+  # ── Backend (Node.js / Express) ──
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: securebank-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://${MONGO_USER:-securebank}:${MONGO_PASSWORD:-securebank_dev_pass}@mongodb:27017/banking-lab?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-docker_dev_jwt_secret_change_in_production}
+      NODE_ENV: ${NODE_ENV:-production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-103885e71369a52f5c175d11565e0e666176f776f0514b0681efd6087dad4fa6}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - server_uploads:/app/uploads
+    networks:
+      - securebank-network
+
+  # ── Frontend (React / Vite via Nginx) ──
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: securebank-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - securebank-network
+
+volumes:
+  mongodb_data:
+  server_uploads:
+
+networks:
+  securebank-network:
+    driver: bridge

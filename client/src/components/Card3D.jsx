@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Float, Text, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
@@ -121,8 +121,10 @@ const Card3D = ({ balance, name }) => {
         <directionalLight position={[5, 10, 5]} intensity={1.5} color="#ffffff" />
         <directionalLight position={[-5, -10, 5]} intensity={1} color="#8b5cf6" />
         <AnimatedLight />
-        <Environment preset="city" />
-        <CardMesh balance={balance} name={name} />
+        <Suspense fallback={null}>
+          <Environment preset="city" />
+          <CardMesh balance={balance} name={name} />
+        </Suspense>
       </Canvas>
     </div>
   );

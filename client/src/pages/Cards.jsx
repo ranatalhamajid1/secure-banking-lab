@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
-import { useAppData } from '../context/AppDataContext';
+import { useCard } from '../context/CardContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -92,7 +92,7 @@ const Card3DFlip = ({ card, isFlipped, onClick }) => {
 
 const Cards = () => {
   const { user } = useAuth();
-  const { cards, setCards, cardsLoading: loading, refreshCards } = useAppData();
+  const { cards, setCards, cardsLoading: loading, refreshCards } = useCard();
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [generating, setGenerating] = useState(false);

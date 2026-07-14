@@ -1,0 +1,32 @@
+{
+  "name": "secure-banking-lab",
+  "version": "1.0.0",
+  "description": "SecureBank – Enterprise-grade banking application with comprehensive testing",
+  "private": true,
+  "scripts": {
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e:report": "npx playwright show-report test-results/playwright-report",
+    "test:e2e:desktop": "npx playwright test --project=Desktop-Chrome",
+    "test:e2e:mobile": "npx playwright test --project=Mobile-iPhone",
+    "test:security": "npx playwright test tests/e2e/security.spec.js",
+    "test:load": "npx artillery run tests/artillery/load-test.yml",
+    "test:load:smoke": "npx artillery run tests/artillery/smoke-test.yml",
+    "test:load:stress": "npx artillery run tests/artillery/stress-test.yml",
+    "test:lighthouse": "npx lhci autorun",
+    "test:all": "npm run test:e2e && npm run test:load:smoke",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "keywords": ["banking", "fintech", "mern", "enterprise", "secure"],
+  "author": "Talha Majid",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@axe-core/playwright": "^4.10.0"
+  }
+}

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import Card3D from './Card3D';
+import React, { useEffect, Suspense, lazy } from 'react';
+const Card3D = lazy(() => import('./Card3D'));
 import { motion, animate, useMotionValue, useTransform } from 'framer-motion';
 import { Wallet, ArrowUpRight } from 'lucide-react';
 
@@ -76,9 +76,9 @@ const BalanceCard = ({ user }) => {
       </div>
 
       <div style={{ flex: '1 1 380px', minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', zIndex: 1 }}>
-        <div style={{ width: '100%', maxWidth: '420px', height: '100%', minHeight: '260px', position: 'relative' }}>
-          <Card3D balance={user?.accountBalance} name={user?.name} />
-        </div>
+          <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>Loading WebGL engine...</div>}>
+            <Card3D balance={user?.accountBalance} name={user?.name} />
+          </Suspense>
       </div>
     </motion.div>
   );

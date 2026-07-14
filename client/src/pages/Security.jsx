@@ -42,8 +42,8 @@ const Security = () => {
   const handleSetup2FA = async () => {
     try {
       const res = await api.post('/auth/2fa/setup');
-      setTwoFactorSecret(res.data.secret);
-      setTwoFactorQr(res.data.qrCode);
+      setTwoFactorSecret(res.data.data.secret);
+      setTwoFactorQr(res.data.data.qrCode);
       setShow2FAModal(true);
       toast.success('2FA Setup Initialized');
     } catch (error) {

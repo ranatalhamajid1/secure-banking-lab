@@ -2,10 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="SecureBank - Premium secure banking dashboard with JWT authentication, real-time transfers, and admin security." />
     <title>SecureBank — Secure Banking Reimagined</title>
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('sb-theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

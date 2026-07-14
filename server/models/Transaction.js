@@ -5,13 +5,15 @@ const transactionSchema = new mongoose.Schema({
     sender: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: true,
+        index: true
     },
 
     receiver: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: true,
+        index: true
     },
 
     amount: {
@@ -33,6 +35,12 @@ const transactionSchema = new mongoose.Schema({
         type: String,
         enum: ['PROCESSING', 'SUCCESS', 'FAILED', 'REFUNDED', 'success', 'failed', 'pending'],
         default: 'PROCESSING'
+    },
+    
+    requestId: {
+        type: String,
+        unique: true,
+        sparse: true
     }
 
 }, { timestamps: true });

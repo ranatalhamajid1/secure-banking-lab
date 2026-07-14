@@ -1,0 +1,25 @@
+# SecureBank – Artillery Stress Test (Caching Validation)
+# Used to verify the in-memory cache on /api/public/stats
+# can handle a severe traffic spike (e.g., DoS attempt).
+
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 10
+      arrivalRate: 10
+      name: "Warm up"
+    - duration: 30
+      arrivalRate: 200
+      name: "Spike phase - Cache validation"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Stats Cache Stress"
+    weight: 100
+    flow:
+      - get:
+          url: "/api/public/stats"
+          expect:
+            - statusCode: 200
