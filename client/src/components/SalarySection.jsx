@@ -43,32 +43,43 @@ const SalarySection = () => {
     gsap.ticker.lagSmoothing(0);
 
     let ctx = gsap.context(() => {
-      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       if (prefersReducedMotion) {
-        // Reduced motion fallback
         gsap.to([leftCardRef.current, centerCardRef.current, rightCardRef.current], {
           opacity: 1, y: 0, stagger: 0.2, duration: 1
         });
         return;
       }
 
-      // Initial States
-      gsap.set([headingLine1Ref.current, headingLine2Ref.current], { y: 100, opacity: 0 });
-      gsap.set(paraRef.current, { opacity: 0, y: 30 });
-      gsap.set(btnRef.current, { scale: 0.95, opacity: 0 });
-      
-      // Cards Initial CSS
-      gsap.set(leftCardRef.current, { x: isDesktop ? -320 : 0, z: isDesktop ? -100 : 0, rotationY: isDesktop ? 15 : 0, opacity: 0, filter: 'blur(10px)', force3D: true });
-      gsap.set(centerCardRef.current, { x: 0, z: 50, opacity: 0, filter: 'blur(10px)', force3D: true, zIndex: 10 });
-      gsap.set(rightCardRef.current, { x: isDesktop ? 320 : 0, z: isDesktop ? -100 : 0, rotationY: isDesktop ? -15 : 0, opacity: 0, filter: 'blur(10px)', force3D: true });
-
       // MatchMedia Setup
       let mm = gsap.matchMedia();
 
       mm.add("(min-width: 1024px)", () => {
-        // Master Timeline
+        // Desktop Initial States
+        gsap.set([headingLine1Ref.current, headingLine2Ref.current], { y: 100, opacity: 0 });
+        gsap.set(paraRef.current, { opacity: 0, y: 30 });
+        gsap.set(btnRef.current, { scale: 0.95, opacity: 0 });
+        
+        gsap.set(leftCardRef.current, { x: -320, z: -100, rotationY: 15, opacity: 0, filter: 'blur(10px)', force3D: true });
+        gsap.set(centerCardRef.current, { x: 0, z: 50, opacity: 0, filter: 'blur(10px)', force3D: true, zIndex: 10 });
+        gsap.set(rightCardRef.current, { x: 320, z: -100, rotationY: -15, opacity: 0, filter: 'blur(10px)', force3D: true });
+
+        // Step 1: Text Entry (independent of scrub, starts earlier)
+        gsap.to([headingLine1Ref.current, headingLine2Ref.current], { 
+          y: 0, opacity: 1, duration: 1, stagger: 0.2, ease: "power3.out", 
+          scrollTrigger: { trigger: sectionRef.current, start: "top 70%" } 
+        });
+        gsap.to(paraRef.current, { 
+          opacity: 1, y: 0, duration: 1, ease: "power2.out", delay: 0.4, 
+          scrollTrigger: { trigger: sectionRef.current, start: "top 70%" } 
+        });
+        gsap.to(btnRef.current, { 
+          scale: 1, opacity: 1, duration: 0.8, ease: "back.out(1.7)", delay: 0.6, 
+          scrollTrigger: { trigger: sectionRef.current, start: "top 70%" } 
+        });
+
+        // Master Timeline for cards (pinned)
         const tl = gsap.timeline({
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -91,41 +102,53 @@ const SalarySection = () => {
           }
         });
 
-        // Step 1: Text Entry
-        tl.to(headingLine1Ref.current, { y: 0, opacity: 1, duration: 1, ease: "power3.out" }, 0)
-          .to(headingLine2Ref.current, { y: 0, opacity: 1, duration: 1, ease: "power3.out" }, 0.2)
-          .to(paraRef.current, { opacity: 1, y: 0, duration: 1, ease: "power2.out" }, 0.4)
-          .to(btnRef.current, { scale: 1, opacity: 1, duration: 0.8, ease: "back.out(1.7)" }, 0.6);
-
         // Step 2: Cards Enter
         tl.to([leftCardRef.current, centerCardRef.current, rightCardRef.current], {
           opacity: 1, filter: 'blur(0px)', duration: 1.5, ease: "power2.out"
-        }, 0.8);
+        }, 0);
 
         // Step 3: Center scales, Z translates
         tl.to(centerCardRef.current, {
           scale: 1.05, z: 150, boxShadow: "0 40px 80px rgba(0,0,0,0.4)", filter: "brightness(1.1)", duration: 2, ease: "power2.inOut"
-        }, 2);
+        }, 1.5);
 
         // Step 4: Sides move back
         tl.to(leftCardRef.current, {
           x: -400, z: -200, rotationY: 25, opacity: 0.7, filter: "brightness(0.6) blur(3px)", duration: 2, ease: "power2.inOut"
-        }, 2)
+        }, 1.5)
         .to(rightCardRef.current, {
           x: 400, z: -200, rotationY: -25, opacity: 0.7, filter: "brightness(0.6) blur(3px)", duration: 2, ease: "power2.inOut"
-        }, 2);
+        }, 1.5);
 
         // Step 5 & 6: Smooth swaps could be extended here. We'll do a graceful float rotation.
         tl.to(cardsContainerRef.current, {
           rotationY: 10, rotationX: 5, z: -50, duration: 2, ease: "sine.inOut"
-        }, 4);
+        }, 3.5);
         
         tl.to(cardsContainerRef.current, {
           rotationY: -10, rotationX: -5, duration: 2, ease: "sine.inOut"
-        }, 6);
+        }, 5.5);
 
-        // Cleanup timeline reference
         return () => tl.kill();
+      });
+
+      mm.add("(max-width: 1023px)", () => {
+        // Mobile Initial States
+        gsap.set([headingLine1Ref.current, headingLine2Ref.current, paraRef.current, btnRef.current], { y: 20, opacity: 0 });
+        gsap.set(leftCardRef.current, { x: -20, y: -20, zIndex: 1, opacity: 0 });
+        gsap.set(centerCardRef.current, { x: 0, y: 0, zIndex: 3, opacity: 0 });
+        gsap.set(rightCardRef.current, { x: 20, y: 20, zIndex: 2, opacity: 0 });
+
+        // Mobile Animations
+        gsap.to([headingLine1Ref.current, headingLine2Ref.current, paraRef.current, btnRef.current], {
+          y: 0, opacity: 1, duration: 0.8, stagger: 0.1, ease: "power2.out",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 80%" }
+        });
+
+        gsap.to([leftCardRef.current, centerCardRef.current, rightCardRef.current], {
+          opacity: 1, duration: 1, stagger: 0.2, ease: "power2.out",
+          scrollTrigger: { trigger: cardsContainerRef.current, start: "top 80%" }
+        });
       });
 
       // Floating Loop (IntersectionObserver bounded)
