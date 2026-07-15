@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Lenis from '@studio-freight/lenis';
 import { Coffee, Home, Shield } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -23,25 +22,6 @@ const SalarySection = () => {
   const isVisibleRef = useRef(false);
 
   useEffect(() => {
-    // 1. Lenis Smooth Scrolling (Optimized for speed and responsiveness)
-    const lenis = new Lenis({
-      duration: 0.8, // Faster scroll transition
-      easing: (t) => 1 - Math.pow(1 - t, 4), // Fast deceleration ease
-      direction: 'vertical',
-      gestureDirection: 'vertical',
-      smooth: true,
-      mouseMultiplier: 1.8, // Moves more pixels per scroll tick
-      smoothTouch: false,
-      touchMultiplier: 2,
-      infinite: false,
-    });
-
-    lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((time) => {
-      lenis.raf(time * 1000);
-    });
-    gsap.ticker.lagSmoothing(0);
-
     let ctx = gsap.context(() => {
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -84,21 +64,11 @@ const SalarySection = () => {
           scrollTrigger: {
             trigger: sectionRef.current,
             start: "top top",
-            end: () => "+=" + window.innerHeight * 0.8, // Extremely fast scroll
+            end: () => "+=" + window.innerHeight * 0.6,
             pin: true,
-            scrub: 0.2, // Extremely tight scrub
+            scrub: 0.5,
             anticipatePin: 1,
             invalidateOnRefresh: true,
-            onUpdate: (self) => {
-              // Velocity Motion Blur
-              const velocity = self.getVelocity();
-              const blurAmt = Math.min(Math.abs(velocity / 1000), 5);
-              if (blurAmt > 1) {
-                gsap.set(cardsContainerRef.current, { filter: `blur(${blurAmt}px)` });
-              } else {
-                gsap.to(cardsContainerRef.current, { filter: 'blur(0px)', duration: 0.2 });
-              }
-            }
           }
         });
 
@@ -135,19 +105,20 @@ const SalarySection = () => {
       mm.add("(max-width: 1023px)", () => {
         // Mobile Initial States
         gsap.set([headingLine1Ref.current, headingLine2Ref.current, paraRef.current, btnRef.current], { y: 20, opacity: 0 });
-        gsap.set(leftCardRef.current, { x: -20, y: -20, zIndex: 1, opacity: 0 });
-        gsap.set(centerCardRef.current, { x: 0, y: 0, zIndex: 3, opacity: 0 });
-        gsap.set(rightCardRef.current, { x: 20, y: 20, zIndex: 2, opacity: 0 });
+        gsap.set(leftCardRef.current,   { y: 40, opacity: 0, filter: 'blur(4px)' });
+        gsap.set(centerCardRef.current, { y: 30, opacity: 0, filter: 'blur(4px)' });
+        gsap.set(rightCardRef.current,  { y: 50, opacity: 0, filter: 'blur(4px)' });
 
-        // Mobile Animations
+        // Mobile Animations - text
         gsap.to([headingLine1Ref.current, headingLine2Ref.current, paraRef.current, btnRef.current], {
           y: 0, opacity: 1, duration: 0.8, stagger: 0.1, ease: "power2.out",
-          scrollTrigger: { trigger: sectionRef.current, start: "top 80%" }
+          scrollTrigger: { trigger: sectionRef.current, start: "top 80%", toggleActions: 'play none none none' }
         });
 
+        // Mobile Animations - cards (animate BOTH opacity and y)
         gsap.to([leftCardRef.current, centerCardRef.current, rightCardRef.current], {
-          opacity: 1, duration: 1, stagger: 0.2, ease: "power2.out",
-          scrollTrigger: { trigger: cardsContainerRef.current, start: "top 80%" }
+          y: 0, opacity: 1, filter: 'blur(0px)', duration: 0.9, stagger: 0.18, ease: "power2.out",
+          scrollTrigger: { trigger: cardsContainerRef.current, start: "top 88%", toggleActions: 'play none none none' }
         });
       });
 
@@ -197,7 +168,6 @@ const SalarySection = () => {
 
     return () => {
       ctx.revert();
-      lenis.destroy();
     };
   }, []);
 
@@ -229,7 +199,7 @@ const SalarySection = () => {
 
         {/* 3D Cards Container */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', perspective: '1600px', paddingBottom: '40px' }}>
-          <div ref={cardsContainerRef} style={{ position: 'relative', width: '320px', height: '480px', transformStyle: 'preserve-3d' }}>
+          <div ref={cardsContainerRef} style={{ position: 'relative', width: 'min(320px, 85vw)', height: 'min(480px, 80vw)', transformStyle: 'preserve-3d' }}>
             
             {/* LEFT CARD */}
             <div ref={leftCardRef} style={{

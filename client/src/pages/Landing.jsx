@@ -6,7 +6,7 @@ import { Coffee, Home, Shield, Zap } from 'lucide-react';
 
 const SalarySection = lazy(() => import('../components/SalarySection'));
 
-// Custom CSS for phone mockups and premium cards
+// Custom CSS for phone mockups, premium cards, and responsive nav
 const styles = `
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
@@ -14,6 +14,26 @@ const styles = `
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  .nav-links {
+    display: none;
+  }
+  @media (min-width: 768px) {
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      color: #fff;
+      font-size: 0.9375rem;
+      font-weight: 600;
+    }
+  }
+  .nav-logo-text {
+    display: none;
+  }
+  @media (min-width: 480px) {
+    .nav-logo-text {
+      display: inline;
+    }
   }
   .premium-card {
     border-radius: 20px;
@@ -53,34 +73,44 @@ const styles = `
     border-bottom-right-radius: 16px;
     z-index: 10;
   }
-
-  /* Mobile Responsive Fixes */
-  @media (max-width: 768px) {
-    .nav-container { padding: 16px 20px !important; }
-    .nav-logo-text { font-size: 1.25rem !important; }
-    .nav-actions { gap: 12px !important; }
-    .nav-login-btn { font-size: 0.875rem !important; white-space: nowrap; }
-    .nav-signup-btn { padding: 8px 16px !important; font-size: 0.875rem !important; white-space: nowrap; }
-    
-    .hero-title { font-size: 3.5rem !important; }
-    .hero-lady { width: 320px !important; height: 440px !important; top: calc(50% - 220px) !important; left: calc(50% - 160px) !important; }
-    .hero-glass { width: 320px !important; height: 440px !important; top: calc(50% - 220px) !important; left: calc(50% - 160px) !important; padding: 24px 20px !important; }
-    .hero-glass-amount { font-size: 3rem !important; }
-    
-    .hero-bottom-text { bottom: 5% !important; left: 20px !important; right: 20px !important; max-width: 100% !important; }
-    .hero-bottom-text p { font-size: 1rem !important; margin-bottom: 20px !important; }
-    
-    .section-padding { padding: 60px 20px !important; }
-    .section-title { font-size: 2.5rem !important; }
-    .section-desc { font-size: 1rem !important; }
-    
-    .phone-mockup { width: 320px !important; height: 650px !important; }
-    .floating-card-1, .floating-card-2 { display: none !important; }
-    
-    .metal-cards-container { flex-direction: column !important; gap: 20px !important; height: auto !important; margin-bottom: 40px !important; }
-    .metal-card { margin-left: 0 !important; width: 100% !important; max-width: 320px !important; height: 200px !important; transform: none !important; margin-bottom: 10px !important; }
-    
-    .footer-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .hero-card {
+    position: absolute;
+    top: calc(50% - 280px);
+    left: calc(50% - 210px);
+    width: 420px;
+    height: 560px;
+  }
+  .hero-title {
+    position: absolute;
+    top: 25%;
+    left: 20px;
+    right: 20px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .hero-cta {
+    position: absolute;
+    bottom: 15%;
+    left: 48px;
+    z-index: 20;
+    max-width: 480px;
+  }
+  @media (max-width: 640px) {
+    .hero-card {
+      top: calc(50% - 160px);
+      left: calc(50% - 130px);
+      width: 260px;
+      height: 340px;
+    }
+    .hero-title {
+      top: 15%;
+    }
+    .hero-cta {
+      bottom: 6%;
+      left: 16px;
+      right: 16px;
+      max-width: 100%;
+    }
   }
 `;
 
@@ -92,8 +122,8 @@ const Landing = () => {
   // Advanced Scroll Animations
   const { scrollYProgress } = useScroll({ target: containerRef });
   
-  const heroY = useTransform(scrollYProgress, [0, 0.2], [0, 150]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
+  const heroY = useTransform(scrollYProgress, [0, 0.3], [0, 100]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -130,55 +160,52 @@ const Landing = () => {
       }}>
         
         {/* NAVBAR */}
-        <nav className="nav-container" style={{
-          width: '100%', padding: '24px 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        <nav style={{
+          width: '100%', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           zIndex: 50, background: scrolled ? 'rgba(255,255,255,0.05)' : 'transparent',
           backdropFilter: scrolled ? 'blur(16px)' : 'none', WebkitBackdropFilter: scrolled ? 'blur(16px)' : 'none',
-          transition: 'all 0.3s ease', position: 'fixed', top: scrolled ? 0 : 44
+          transition: 'all 0.3s ease', position: 'fixed', top: scrolled ? 0 : 44,
+          boxSizing: 'border-box',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             {/* Logo */}
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', color: '#fff' }}>
               <Shield size={28} fill="#fff" color="#3B59FF" />
-              <span className="nav-logo-text" style={{ fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.05em' }}>SecureBank</span>
+              <span className="nav-logo-text" style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.05em' }}>SecureBank</span>
             </Link>
-            <div style={{ display: 'none', gap: '24px', color: '#fff', fontSize: '0.9375rem', fontWeight: 600, '@media(min-width: 768px)': { display: 'flex' } }}>
+            <div className="nav-links">
               <Link to="#" style={{ color: '#fff', textDecoration: 'none' }}>Personal</Link>
               <Link to="#" style={{ color: '#fff', textDecoration: 'none' }}>Business</Link>
-              <Link to="#" style={{ color: '#fff', textDecoration: 'none' }}>Kids & Teens</Link>
+              <Link to="#" style={{ color: '#fff', textDecoration: 'none' }}>Kids &amp; Teens</Link>
               <Link to="#" style={{ color: '#fff', textDecoration: 'none' }}>Company</Link>
             </div>
           </div>
-          <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <Link to="/login" className="nav-login-btn" style={{ color: '#fff', textDecoration: 'none', fontSize: '0.9375rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Log in</Link>
-            <Link to="/register" className="nav-signup-btn" style={{
-              background: '#fff', color: '#000', padding: '10px 24px', borderRadius: '9999px',
-              textDecoration: 'none', fontSize: '0.9375rem', fontWeight: 600, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap'
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Link to="/login" style={{ color: '#fff', textDecoration: 'none', fontSize: '0.9375rem', fontWeight: 600 }}>Log in</Link>
+            <Link to="/register" style={{
+              background: '#fff', color: '#000', padding: '10px 20px', borderRadius: '9999px',
+              textDecoration: 'none', fontSize: '0.9375rem', fontWeight: 600, boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              whiteSpace: 'nowrap',
             }}>Sign up</Link>
           </div>
         </nav>
 
         {/* HERO CONTENT with Parallax */}
         <motion.div style={{
-          position: 'relative', width: '100%', maxWidth: '1400px', padding: '60px 48px',
+          position: 'relative', width: '100%', maxWidth: '1400px', padding: '60px 20px',
           flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
           y: heroY, opacity: heroOpacity
         }}>
           
           {/* LADY IMAGE (Layer 1) */}
           <motion.img 
-            className="hero-lady"
             src="/hero-bg.png" 
             alt="Lady"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3 }}
+            className="hero-card"
             style={{
-              position: 'absolute',
-              top: 'calc(50% - 280px)',
-              left: 'calc(50% - 210px)',
-              width: '420px',
-              height: '560px',
               objectFit: 'cover',
               objectPosition: 'center 35%',
               borderRadius: '32px',
@@ -188,19 +215,16 @@ const Landing = () => {
           />
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
-            style={{ position: 'absolute', top: '25%', left: '48px', right: '48px', zIndex: 5, pointerEvents: 'none' }}>
-            <h1 className="hero-title" style={{
-              fontSize: 'clamp(5rem, 11vw, 12rem)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 0.95, margin: 0, textAlign: 'center'
-            }}>Banking & Beyond</h1>
+            className="hero-title">
+            <h1 style={{
+              fontSize: 'clamp(3rem, 11vw, 12rem)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 0.95, margin: 0, textAlign: 'center'
+            }}>Banking &amp; Beyond</h1>
           </motion.div>
 
           {/* GLASS CARD OUTLINE & TEXT (Layer 3) */}
-          <motion.div className="hero-glass" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, delay: 0.3 }}
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, delay: 0.3 }}
+            className="hero-card"
             style={{
-              position: 'absolute', 
-              top: 'calc(50% - 280px)', 
-              left: 'calc(50% - 210px)',
-              width: '420px', height: '560px', 
               border: '1.5px solid rgba(255, 255, 255, 0.5)', 
               borderRadius: '32px',
               background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.08) 100%)',
@@ -211,7 +235,7 @@ const Landing = () => {
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)', zIndex: 1 }} />
             <div style={{ textAlign: 'center', position: 'relative', zIndex: 2 }}>
               <div style={{ color: '#fff', fontSize: '1.125rem', fontWeight: 500, marginBottom: '4px', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>Personal</div>
-              <div className="hero-glass-amount" style={{ color: '#fff', fontSize: '4rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '24px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>$6,012</div>
+              <div style={{ color: '#fff', fontSize: '4rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '24px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>$6,012</div>
               <div style={{ background: '#fff', color: '#000', padding: '12px 32px', borderRadius: '9999px', fontSize: '1rem', fontWeight: 700, display: 'inline-block', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                 Accounts
               </div>
@@ -219,8 +243,8 @@ const Landing = () => {
           </motion.div>
 
           {/* BOTTOM LEFT TEXT & CTA */}
-          <motion.div className="hero-bottom-text" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.5 }}
-            style={{ position: 'absolute', bottom: '15%', left: '48px', zIndex: 20, maxWidth: '480px' }}>
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.5 }}
+            className="hero-cta">
             <p style={{ fontSize: '1.25rem', color: '#fff', fontWeight: 500, lineHeight: 1.5, marginBottom: '32px', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
               This is your bank, redefined. Get powerful daily banking and global freedom. Sign up for free in a tap.
             </p>
@@ -239,10 +263,10 @@ const Landing = () => {
 
 
       {/* ═══════════════════ GO VIRTUAL ═══════════════════ */}
-      <section className="section-padding" style={{ padding: '140px 48px', background: '#000', color: '#fff', textAlign: 'center', overflow: 'hidden' }}>
+      <section style={{ padding: '140px 48px', background: '#000', color: '#fff', textAlign: 'center', overflow: 'hidden' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto 80px' }}>
-          <h2 className="section-title" style={{ fontSize: '4rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '24px' }}>Go virtual</h2>
-          <p className="section-desc" style={{ fontSize: '1.25rem', color: '#a1a1aa', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px', lineHeight: 1.6 }}>
+          <h2 style={{ fontSize: '4rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '24px' }}>Go virtual</h2>
+          <p style={{ fontSize: '1.25rem', color: '#a1a1aa', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px', lineHeight: 1.6 }}>
             Create and add virtual cards to your Apple Wallet or Google Wallet to start paying right away.
           </p>
           <Link to="/register" style={{
@@ -276,7 +300,7 @@ const Landing = () => {
           </motion.div>
 
           {/* Floating Cards around phone */}
-          <motion.div className="floating-card-1" initial={{ x: -200, y: 200, opacity: 0 }} whileInView={{ x: -280, y: 50, opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} viewport={{ margin: '-100px' }}
+          <motion.div initial={{ x: -200, y: 200, opacity: 0 }} whileInView={{ x: -280, y: 50, opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} viewport={{ margin: '-100px' }}
             style={{
               position: 'absolute', width: '280px', height: '170px', borderRadius: '16px', background: 'linear-gradient(135deg, #333, #111)',
               border: '1px solid #444', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
@@ -286,7 +310,7 @@ const Landing = () => {
             <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'right' }}>VIRTUAL</div>
           </motion.div>
 
-          <motion.div className="floating-card-2" initial={{ x: 200, y: -100, opacity: 0 }} whileInView={{ x: 250, y: -50, opacity: 1 }} transition={{ duration: 0.8, delay: 0.4 }} viewport={{ margin: '-100px' }}
+          <motion.div initial={{ x: 200, y: -100, opacity: 0 }} whileInView={{ x: 250, y: -50, opacity: 1 }} transition={{ duration: 0.8, delay: 0.4 }} viewport={{ margin: '-100px' }}
             style={{
               position: 'absolute', width: '320px', height: '190px', borderRadius: '16px', background: '#ccff00', color: '#000',
               padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
@@ -300,10 +324,10 @@ const Landing = () => {
       </section>
 
       {/* ═══════════════════ ELEVATE YOUR SPEND ═══════════════════ */}
-      <section className="section-padding" style={{ padding: '140px 48px', background: '#111216', color: '#fff', textAlign: 'center', overflow: 'hidden' }}>
+      <section style={{ padding: '140px 48px', background: '#111216', color: '#fff', textAlign: 'center', overflow: 'hidden' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto 80px' }}>
-          <h2 className="section-title" style={{ fontSize: '4rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '24px' }}>Elevate your spend</h2>
-          <p className="section-desc" style={{ fontSize: '1.25rem', color: '#a1a1aa', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px', lineHeight: 1.6 }}>
+          <h2 style={{ fontSize: '4rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '24px' }}>Elevate your spend</h2>
+          <p style={{ fontSize: '1.25rem', color: '#a1a1aa', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px', lineHeight: 1.6 }}>
             Earn points on your purchases with one of our debit cards. Then redeem them for Airline Miles and other rewards.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
@@ -315,7 +339,7 @@ const Landing = () => {
         </div>
 
         {/* OVERLAPPING METAL CARDS */}
-        <div className="metal-cards-container" style={{ position: 'relative', height: '400px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', perspective: '1500px' }}>
+        <div style={{ position: 'relative', height: '400px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', perspective: '1500px' }}>
           {[
             { bg: 'linear-gradient(135deg, #e000ff, #001aff)', delay: 0 },
             { bg: 'linear-gradient(135deg, #aaaaaa, #666666)', delay: 0.1 },
@@ -327,7 +351,7 @@ const Landing = () => {
               whileInView={{ opacity: 1, x: 0, rotateY: -15, zZ: 0 }}
               transition={{ duration: 0.8, delay: card.delay, type: 'spring' }}
               viewport={{ margin: '-100px' }}
-              className="premium-card metal-card"
+              className="premium-card"
               style={{
                 width: '260px', height: '380px', background: card.bg, padding: '32px 24px', display: 'flex', flexDirection: 'column',
                 justifyContent: 'space-between', zIndex: 10 - i, transformOrigin: 'center right',
@@ -343,9 +367,9 @@ const Landing = () => {
       </section>
 
       {/* ═══════════════════ MEGA FOOTER ═══════════════════ */}
-      <footer className="section-padding" style={{ background: '#18181b', color: '#a1a1aa', padding: '80px 48px 40px', fontSize: '0.9375rem' }}>
+      <footer style={{ background: '#18181b', color: '#a1a1aa', padding: '80px 48px 40px', fontSize: '0.9375rem' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <div className="footer-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '48px', marginBottom: '80px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '48px', marginBottom: '80px' }}>
             <div>
               <div style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.05em', marginBottom: '24px' }}>SecureBank</div>
               <p style={{ lineHeight: 1.6, marginBottom: '24px' }}>One app, all things money. We're building a global financial superapp.</p>
